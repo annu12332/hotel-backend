@@ -177,6 +177,60 @@ app.get('/api/admin/stats', async (req, res) => {
         });
     } catch (error) { res.status(500).json({ success: false }); }
 });
+const Blog = require('./models/Blog'); 
+
+// --- BLOG API ROUTES ---
+
+// সব ব্লগ পাওয়ার জন্য
+app.get('/api/blogs', async (req, res) => {
+    try {
+        const blogs = await Blog.find().sort({ createdAt: -1 });
+        res.status(200).json(blogs);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// নতুন ব্লগ পোস্ট করার জন্য
+app.post('/api/blogs', async (req, res) => {
+    try {
+        const newBlog = new Blog(req.body);
+        await newBlog.save();
+        res.status(201).json(newBlog);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// ব্লগ ডিলিট করার জন্য
+app.delete('/api/blogs/:id', async (req, res) => {
+    try {
+        await Blog.findByIdAndDelete(req.params.id);
+        res.status(200).json({ success: true, message: "Blog deleted" });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// ব্লগ আপডেট করার জন্য (Edit Logic)
+app.put('/api/blogs/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updatedBlog = await Blog.findByIdAndUpdate(
+            id, 
+            { $set: req.body }, 
+            { new: true } 
+        );
+        
+        if (!updatedBooking) {
+            return res.status(404).json({ message: "Blog not found" });
+        }
+        
+        res.status(200).json(updatedBlog);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
 
 // Server Start
 const PORT = process.env.PORT || 5000;
