@@ -4,6 +4,7 @@ const cors = require('cors');
 const axios = require('axios'); 
 require('dotenv').config();
 
+// Models
 const Room = require('./models/Room'); 
 const Booking = require('./models/Booking');
 const Gallery = require('./models/Gallery');
@@ -11,14 +12,16 @@ const Offer = require('./models/Offers');
 
 const app = express();
 
+// Middleware
 app.use(cors({ origin: "*" })); 
 app.use(express.json());
 
+// MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("✅ Connected to MongoDB"))
     .catch(err => console.log("❌ DB Error:", err.message));
 
-// --- ROOM API ROUTES --- (আপনার আগের কোড ঠিক আছে)
+// --- ROOM API ROUTES ---
 app.get('/api/rooms', async (req, res) => {
     try {
         const rooms = await Room.find().sort({ createdAt: -1 });
@@ -57,7 +60,9 @@ app.delete('/api/rooms/:id', async (req, res) => {
     }
 });
 
-// --- BOOKING API ROUTES --- (আপনার আগের কোড ঠিক আছে)
+// --- BOOKING API ROUTES (FULL UPDATED) ---
+
+// নতুন বুকিং তৈরি (POST)
 app.post('/api/bookings', async (req, res) => {
     try {
         const newBooking = new Booking(req.body);
@@ -77,16 +82,50 @@ app.post('/api/bookings', async (req, res) => {
     }
 });
 
+// সব বুকিং দেখা (GET)
 app.get('/api/bookings', async (req, res) => {
     try {
         const bookings = await Booking.find().sort({ createdAt: -1 });
         res.status(200).json(bookings);
     } catch (error) {
-        res.status(500).json({ success: false });
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// --- GALLERY API ROUTES --- (আপনার আগের কোড ঠিক আছে)
+// বুকিং স্ট্যাটাস আপডেট (PATCH) - এটি আপনার স্ট্যাটাস বাটনের জন্য
+app.patch('/api/bookings/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        const updatedBooking = await Booking.findByIdAndUpdate(
+            id, 
+            { $set: { status: status } }, 
+            { new: true }
+        );
+        if (!updatedBooking) {
+            return res.status(404).json({ success: false, message: "Booking not found" });
+        }
+        res.status(200).json(updatedBooking);
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// বুকিং ডিলিট (DELETE) - এটি ডিলিট বাটনের জন্য
+app.delete('/api/bookings/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deletedBooking = await Booking.findByIdAndDelete(id);
+        if (!deletedBooking) {
+            return res.status(404).json({ success: false, message: "Booking not found" });
+        }
+        res.status(200).json({ success: true, message: "Booking removed successfully" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// --- GALLERY API ROUTES ---
 app.get('/api/gallery', async (req, res) => {
     try {
         const photos = await Gallery.find().sort({ createdAt: -1 });
@@ -102,36 +141,27 @@ app.post('/api/gallery', async (req, res) => {
     } catch (err) { res.status(400).json({ message: err.message }); }
 });
 
-
-// সব অফার পাওয়ার জন্য
+// --- OFFERS API ROUTES ---
 app.get('/api/offers', async (req, res) => {
     try {
         const offers = await Offer.find().sort({ createdAt: -1 });
         res.status(200).json(offers);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
+    } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// নতুন অফার তৈরি করার জন্য
 app.post('/api/offers', async (req, res) => {
     try {
         const newOffer = new Offer(req.body);
         await newOffer.save();
         res.status(201).json(newOffer);
-    } catch (err) {
-        res.status(400).json({ message: err.message });
-    }
+    } catch (err) { res.status(400).json({ message: err.message }); }
 });
 
-// অফার ডিলিট করার জন্য
 app.delete('/api/offers/:id', async (req, res) => {
     try {
         await Offer.findByIdAndDelete(req.params.id);
         res.status(200).json({ success: true, message: "Offer deleted" });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
+    } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
 // --- ADMIN STATS ---
@@ -148,6 +178,6 @@ app.get('/api/admin/stats', async (req, res) => {
     } catch (error) { res.status(500).json({ success: false }); }
 });
 
-// সার্ভার স্টার্ট
+// Server Start
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server running on port ${PORT}`));
