@@ -232,6 +232,17 @@ app.put('/api/blogs/:id', async (req, res) => {
     }
 });
 
+// Backend (index.js or routes/blog.js)
+app.get('/api/blogs/:id', async (req, res) => {
+    try {
+        const blog = await Blog.findById(req.params.id);
+        if (!blog) return res.status(404).send("Blog not found");
+        res.json(blog);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 // Server Start
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server running on port ${PORT}`));
