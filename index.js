@@ -86,9 +86,9 @@ app.post('/api/package-bookings', async (req, res) => {
     try {
         const { roomTitle, guestName, totalPrice } = req.body;
         
+        // আপনার মডেল অনুযায়ী সব ডেটা সেভ করা হচ্ছে
         const packageBooking = new Booking({
-            ...req.body,
-            bookingType: 'Package'
+            ...req.body
         });
         
         await packageBooking.save();
@@ -104,7 +104,6 @@ app.post('/api/package-bookings', async (req, res) => {
         
         res.status(201).json({ success: true, message: "Package Booked Successfully!", data: packageBooking });
     } catch (error) {
-        console.error("Package Booking Error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
@@ -142,7 +141,7 @@ app.delete('/api/bookings/:id', async (req, res) => {
     }
 });
 
-// --- GET SINGLE ROOM BY ID ---
+// --- SINGLE ROOM BY ID ---
 app.get('/api/rooms/:id', async (req, res) => {
     try {
         const room = await Room.findById(req.params.id);
@@ -154,6 +153,7 @@ app.get('/api/rooms/:id', async (req, res) => {
         res.status(500).json({ success: false, message: "Invalid Room ID or Server Error" });
     }
 });
+
 // --- GALLERY API ROUTES ---
 app.get('/api/gallery', async (req, res) => {
     try {
@@ -231,7 +231,7 @@ app.delete('/api/blogs/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// --- PACKAGE API ROUTES (ADDITIONS) ---
+// --- PACKAGE API ROUTES ---
 app.get('/api/packages', async (req, res) => {
     try {
         const packages = await Package.find().sort({ createdAt: -1 });
@@ -268,11 +268,11 @@ app.delete('/api/packages/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// --- ADMIN STATS (UPDATED) ---
+// --- ADMIN STATS ---
 app.get('/api/admin/stats', async (req, res) => {
     try {
         const totalRooms = await Room.countDocuments();
-        const totalPackages = await Package.countDocuments(); // প্যাকেজ সংখ্যা যোগ করা হয়েছে
+        const totalPackages = await Package.countDocuments();
         const bookings = await Booking.find();
         const totalRevenue = bookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
         
@@ -281,7 +281,7 @@ app.get('/api/admin/stats', async (req, res) => {
             totalPackages,
             totalBookings: bookings.length,
             totalRevenue,
-            pendingBookings: bookings.filter(b => b.status === 'pending').length
+            pendingBookings: bookings.filter(b => b.status === 'Pending').length
         });
     } catch (error) { res.status(500).json({ success: false }); }
 });
