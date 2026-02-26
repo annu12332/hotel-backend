@@ -9,6 +9,8 @@ const Room = require('./models/Room');
 const Booking = require('./models/Booking');
 const Gallery = require('./models/Gallery');
 const Offer = require('./models/Offers'); 
+const Blog = require('./models/Blog'); 
+const Package = require('./models/Package'); 
 
 const app = express();
 
@@ -60,9 +62,7 @@ app.delete('/api/rooms/:id', async (req, res) => {
     }
 });
 
-// --- BOOKING API ROUTES (FULL UPDATED) ---
-
-// নতুন বুকিং তৈরি (POST)
+// --- BOOKING API ROUTES ---
 app.post('/api/bookings', async (req, res) => {
     try {
         const newBooking = new Booking(req.body);
@@ -76,13 +76,12 @@ app.post('/api/bookings', async (req, res) => {
                 parse_mode: 'Markdown'
             }).catch(e => console.log("Telegram Notification Failed"));
         }
-        res.status(201).json({ success: true, data: newBooking });
+        res.status(201).json({ success: true, data: newBooking, message: "Booking Successful!" });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// সব বুকিং দেখা (GET)
 app.get('/api/bookings', async (req, res) => {
     try {
         const bookings = await Booking.find().sort({ createdAt: -1 });
@@ -92,7 +91,6 @@ app.get('/api/bookings', async (req, res) => {
     }
 });
 
-// বুকিং স্ট্যাটাস আপডেট (PATCH) - এটি আপনার স্ট্যাটাস বাটনের জন্য
 app.patch('/api/bookings/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -102,23 +100,15 @@ app.patch('/api/bookings/:id', async (req, res) => {
             { $set: { status: status } }, 
             { new: true }
         );
-        if (!updatedBooking) {
-            return res.status(404).json({ success: false, message: "Booking not found" });
-        }
         res.status(200).json(updatedBooking);
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// বুকিং ডিলিট (DELETE) - এটি ডিলিট বাটনের জন্য
 app.delete('/api/bookings/:id', async (req, res) => {
     try {
-        const { id } = req.params;
-        const deletedBooking = await Booking.findByIdAndDelete(id);
-        if (!deletedBooking) {
-            return res.status(404).json({ success: false, message: "Booking not found" });
-        }
+        await Booking.findByIdAndDelete(req.params.id);
         res.status(200).json({ success: true, message: "Booking removed successfully" });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -164,83 +154,97 @@ app.delete('/api/offers/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// --- ADMIN STATS ---
-app.get('/api/admin/stats', async (req, res) => {
-    try {
-        const totalRooms = await Room.countDocuments();
-        const bookings = await Booking.find();
-        const totalRevenue = bookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
-        res.status(200).json({
-            totalRooms,
-            totalBookings: bookings.length,
-            totalRevenue
-        });
-    } catch (error) { res.status(500).json({ success: false }); }
-});
-const Blog = require('./models/Blog'); 
-
 // --- BLOG API ROUTES ---
-
-// সব ব্লগ পাওয়ার জন্য
 app.get('/api/blogs', async (req, res) => {
     try {
         const blogs = await Blog.find().sort({ createdAt: -1 });
         res.status(200).json(blogs);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
+    } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// নতুন ব্লগ পোস্ট করার জন্য
+app.get('/api/blogs/:id', async (req, res) => {
+    try {
+        const blog = await Blog.findById(req.params.id);
+        if (!blog) return res.status(404).json({ message: "Blog not found" });
+        res.json(blog);
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
 app.post('/api/blogs', async (req, res) => {
     try {
         const newBlog = new Blog(req.body);
         await newBlog.save();
         res.status(201).json(newBlog);
-    } catch (err) {
-        res.status(400).json({ message: err.message });
-    }
+    } catch (err) { res.status(400).json({ message: err.message }); }
 });
 
-// ব্লগ ডিলিট করার জন্য
+app.put('/api/blogs/:id', async (req, res) => {
+    try {
+        const updatedBlog = await Blog.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
+        res.status(200).json(updatedBlog);
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
 app.delete('/api/blogs/:id', async (req, res) => {
     try {
         await Blog.findByIdAndDelete(req.params.id);
         res.status(200).json({ success: true, message: "Blog deleted" });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
+    } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// ব্লগ আপডেট করার জন্য (Edit Logic)
-app.put('/api/blogs/:id', async (req, res) => {
+// --- PACKAGE API ROUTES (ADDITIONS) ---
+app.get('/api/packages', async (req, res) => {
     try {
-        const { id } = req.params;
-        const updatedBlog = await Blog.findByIdAndUpdate(
-            id, 
-            { $set: req.body }, 
-            { new: true } 
-        );
-        
-        if (!updatedBooking) {
-            return res.status(404).json({ message: "Blog not found" });
-        }
-        
-        res.status(200).json(updatedBlog);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
+        const packages = await Package.find().sort({ createdAt: -1 });
+        res.json(packages);
+    } catch (err) { res.status(500).json([]); }
 });
 
-// Backend (index.js or routes/blog.js)
-app.get('/api/blogs/:id', async (req, res) => {
+app.get('/api/packages/:id', async (req, res) => {
     try {
-        const blog = await Blog.findById(req.params.id);
-        if (!blog) return res.status(404).send("Blog not found");
-        res.json(blog);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
+        const pkg = await Package.findById(req.params.id);
+        res.json(pkg);
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+app.post('/api/packages', async (req, res) => {
+    try {
+        const newPkg = new Package(req.body);
+        await newPkg.save();
+        res.status(201).json(newPkg);
+    } catch (err) { res.status(400).json({ message: err.message }); }
+});
+
+app.put('/api/packages/:id', async (req, res) => {
+    try {
+        const updatedPkg = await Package.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
+        res.json(updatedPkg);
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+app.delete('/api/packages/:id', async (req, res) => {
+    try {
+        await Package.findByIdAndDelete(req.params.id);
+        res.status(200).json({ success: true, message: "Package deleted" });
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// --- ADMIN STATS (UPDATED) ---
+app.get('/api/admin/stats', async (req, res) => {
+    try {
+        const totalRooms = await Room.countDocuments();
+        const totalPackages = await Package.countDocuments(); // প্যাকেজ সংখ্যা যোগ করা হয়েছে
+        const bookings = await Booking.find();
+        const totalRevenue = bookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
+        
+        res.status(200).json({
+            totalRooms,
+            totalPackages,
+            totalBookings: bookings.length,
+            totalRevenue,
+            pendingBookings: bookings.filter(b => b.status === 'pending').length
+        });
+    } catch (error) { res.status(500).json({ success: false }); }
 });
 
 // Server Start
