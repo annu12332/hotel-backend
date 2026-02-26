@@ -142,6 +142,18 @@ app.delete('/api/bookings/:id', async (req, res) => {
     }
 });
 
+// --- GET SINGLE ROOM BY ID ---
+app.get('/api/rooms/:id', async (req, res) => {
+    try {
+        const room = await Room.findById(req.params.id);
+        if (!room) {
+            return res.status(404).json({ success: false, message: "Room not found" });
+        }
+        res.status(200).json(room);
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Invalid Room ID or Server Error" });
+    }
+});
 // --- GALLERY API ROUTES ---
 app.get('/api/gallery', async (req, res) => {
     try {
