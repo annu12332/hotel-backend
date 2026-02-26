@@ -82,6 +82,33 @@ app.post('/api/bookings', async (req, res) => {
     }
 });
 
+app.post('/api/package-bookings', async (req, res) => {
+    try {
+        const { roomTitle, guestName, totalPrice } = req.body;
+        
+        const packageBooking = new Booking({
+            ...req.body,
+            bookingType: 'Package'
+        });
+        
+        await packageBooking.save();
+
+        if (process.env.TELEGRAM_BOT_TOKEN) {
+            const msg = `🎁 *New Package Booking!* \n📦 Package: ${roomTitle} \n👤 Guest: ${guestName} \n💰 Total: ${totalPrice}$`;
+            axios.post(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                chat_id: process.env.TELEGRAM_CHAT_ID,
+                text: msg,
+                parse_mode: 'Markdown'
+            }).catch(e => console.log("Telegram Failed"));
+        }
+        
+        res.status(201).json({ success: true, message: "Package Booked Successfully!", data: packageBooking });
+    } catch (error) {
+        console.error("Package Booking Error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 app.get('/api/bookings', async (req, res) => {
     try {
         const bookings = await Booking.find().sort({ createdAt: -1 });
