@@ -6,7 +6,7 @@ require('dotenv').config();
 
 // Models
 const Room = require('./models/Room'); 
-const Booking = require('./models/Booking');
+const RoomBooking = require('./models/RoomBooking'); // আপনার চাহিদা অনুযায়ী নাম পরিবর্তন
 const Gallery = require('./models/Gallery');
 const Offer = require('./models/Offers'); 
 const Blog = require('./models/Blog'); 
@@ -62,14 +62,15 @@ app.delete('/api/rooms/:id', async (req, res) => {
     }
 });
 
-// --- BOOKING API ROUTES ---
+// --- ROOM BOOKING API ROUTES ---
 app.post('/api/bookings', async (req, res) => {
     try {
-        const newBooking = new Booking(req.body);
+        // RoomBooking মডেল ব্যবহার করা হচ্ছে যা আপনার ফ্রন্টএন্ডের সাথে মিলবে
+        const newBooking = new RoomBooking(req.body);
         await newBooking.save();
 
         if (process.env.TELEGRAM_BOT_TOKEN) {
-            const msg = `🔔 *New Booking Request!* \n🏨 Room: ${req.body.roomTitle} \n👤 Guest: ${req.body.guestName}`;
+            const msg = `🔔 *New Room Booking!* \n🏨 Room: ${req.body.roomTitle} \n👤 Guest: ${req.body.guestName} \n📞 Phone: ${req.body.phone}`;
             axios.post(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
                 chat_id: process.env.TELEGRAM_CHAT_ID,
                 text: msg,
@@ -84,17 +85,15 @@ app.post('/api/bookings', async (req, res) => {
 
 app.post('/api/package-bookings', async (req, res) => {
     try {
-        const { roomTitle, guestName, totalPrice } = req.body;
-        
-        // আপনার মডেল অনুযায়ী সব ডেটা সেভ করা হচ্ছে
-        const packageBooking = new Booking({
+        // প্যাকেজ বুকিংয়ের জন্যও RoomBooking মডেল ব্যবহার করা হয়েছে লজিক ঠিক রাখতে
+        const packageBooking = new RoomBooking({
             ...req.body
         });
         
         await packageBooking.save();
 
         if (process.env.TELEGRAM_BOT_TOKEN) {
-            const msg = `🎁 *New Package Booking!* \n📦 Package: ${roomTitle} \n👤 Guest: ${guestName} \n💰 Total: ${totalPrice}$`;
+            const msg = `🎁 *New Package Booking!* \n📦 Package: ${req.body.roomTitle} \n👤 Guest: ${req.body.guestName}`;
             axios.post(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
                 chat_id: process.env.TELEGRAM_CHAT_ID,
                 text: msg,
@@ -110,7 +109,7 @@ app.post('/api/package-bookings', async (req, res) => {
 
 app.get('/api/bookings', async (req, res) => {
     try {
-        const bookings = await Booking.find().sort({ createdAt: -1 });
+        const bookings = await RoomBooking.find().sort({ createdAt: -1 });
         res.status(200).json(bookings);
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -121,7 +120,7 @@ app.patch('/api/bookings/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
-        const updatedBooking = await Booking.findByIdAndUpdate(
+        const updatedBooking = await RoomBooking.findByIdAndUpdate(
             id, 
             { $set: { status: status } }, 
             { new: true }
@@ -134,7 +133,7 @@ app.patch('/api/bookings/:id', async (req, res) => {
 
 app.delete('/api/bookings/:id', async (req, res) => {
     try {
-        await Booking.findByIdAndDelete(req.params.id);
+        await RoomBooking.findByIdAndDelete(req.params.id);
         res.status(200).json({ success: true, message: "Booking removed successfully" });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -273,14 +272,12 @@ app.get('/api/admin/stats', async (req, res) => {
     try {
         const totalRooms = await Room.countDocuments();
         const totalPackages = await Package.countDocuments();
-        const bookings = await Booking.find();
-        const totalRevenue = bookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
+        const bookings = await RoomBooking.find();
         
         res.status(200).json({
             totalRooms,
             totalPackages,
             totalBookings: bookings.length,
-            totalRevenue,
             pendingBookings: bookings.filter(b => b.status === 'Pending').length
         });
     } catch (error) { res.status(500).json({ success: false }); }
