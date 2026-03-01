@@ -6,7 +6,7 @@ require('dotenv').config();
 
 // Models
 const Room = require('./models/Room'); 
-const RoomBooking = require('./models/RoomBooking');
+const RoomBooking = require('./models/RoomBooking'); // আপনার চাহিদা অনুযায়ী নাম পরিবর্তন
 const Gallery = require('./models/Gallery');
 const Offer = require('./models/Offers'); 
 const Blog = require('./models/Blog'); 
@@ -20,11 +20,10 @@ app.use(express.json());
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log("✅ Connected to MongoDB"))
-    .catch(err => console.log("❌ DB Error:", err.message));
+    .then(() => console.log("✅ Connected to MongoDB"))
+    .catch(err => console.log("❌ DB Error:", err.message));
 
 // --- ROOM API ROUTES ---
-// ... (rooms routes remain the same) ...
 app.get('/api/rooms', async (req, res) => {
     try {
         const rooms = await Room.find().sort({ createdAt: -1 });
@@ -65,49 +64,49 @@ app.delete('/api/rooms/:id', async (req, res) => {
 
 // --- ROOM BOOKING API ROUTES ---
 app.post('/api/bookings', async (req, res) => {
-    try {
-        console.log("Booking Request Body:", req.body); // ডিবাগিং এর জন্য লগ
-        const newBooking = new RoomBooking(req.body);
-        await newBooking.save();
+    try {
+        // RoomBooking মডেল ব্যবহার করা হচ্ছে যা আপনার ফ্রন্টএন্ডের সাথে মিলবে
+        const newBooking = new RoomBooking(req.body);
+        await newBooking.save();
 
-        // টেলিগ্রাম নোটিফিকেশন লজিক উন্নত করা হয়েছে
-        if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-            const msg = `🔔 *New Room Booking!* \n🏨 Room: ${req.body.roomTitle} \n👤 Guest: ${req.body.guestName} \n📞 Phone: ${req.body.phone}`;
-            axios.post(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                chat_id: process.env.TELEGRAM_CHAT_ID,
-                text: msg,
-                parse_mode: 'Markdown'
-            }).catch(e => console.error("Telegram Notification Error Details:", e.response ? e.response.data : e.message));
-        }
-        res.status(201).json({ success: true, data: newBooking, message: "Booking Successful!" });
-    } catch (error) {
-        console.error("Internal Booking Error:", error); // লগে এরর প্রিন্ট করার জন্য
-        res.status(500).json({ success: false, message: error.message });
-    }
+        if (process.env.TELEGRAM_BOT_TOKEN) {
+            const msg = `🔔 *New Room Booking!* \n🏨 Room: ${req.body.roomTitle} \n👤 Guest: ${req.body.guestName} \n📞 Phone: ${req.body.phone}`;
+            axios.post(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                chat_id: process.env.TELEGRAM_CHAT_ID,
+                text: msg,
+                parse_mode: 'Markdown'
+            }).catch(e => console.log("Telegram Notification Failed"));
+        }
+        res.status(201).json({ success: true, data: newBooking, message: "Booking Successful!" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
 
 app.post('/api/package-bookings', async (req, res) => {
-    try {
-        const packageBooking = new RoomBooking(req.body);
-        await packageBooking.save();
+    try {
+        // প্যাকেজ বুকিংয়ের জন্যও RoomBooking মডেল ব্যবহার করা হয়েছে লজিক ঠিক রাখতে
+        const packageBooking = new RoomBooking({
+            ...req.body
+        });
+        
+        await packageBooking.save();
 
-        if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-            const msg = `🎁 *New Package Booking!* \n📦 Package: ${req.body.roomTitle} \n👤 Guest: ${req.body.guestName}`;
-            axios.post(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                chat_id: process.env.TELEGRAM_CHAT_ID,
-                text: msg,
-                parse_mode: 'Markdown'
-            }).catch(e => console.error("Telegram Package Error Details:", e.response ? e.response.data : e.message));
-        }
-        
-        res.status(201).json({ success: true, message: "Package Booked Successfully!", data: packageBooking });
-    } catch (error) {
-        console.error("Internal Package Error:", error);
-        res.status(500).json({ success: false, message: error.message });
-    }
+        if (process.env.TELEGRAM_BOT_TOKEN) {
+            const msg = `🎁 *New Package Booking!* \n📦 Package: ${req.body.roomTitle} \n👤 Guest: ${req.body.guestName}`;
+            axios.post(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                chat_id: process.env.TELEGRAM_CHAT_ID,
+                text: msg,
+                parse_mode: 'Markdown'
+            }).catch(e => console.log("Telegram Failed"));
+        }
+        
+        res.status(201).json({ success: true, message: "Package Booked Successfully!", data: packageBooking });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
 
-// ... (remaining routes) ...
 app.get('/api/bookings', async (req, res) => {
     try {
         const bookings = await RoomBooking.find().sort({ createdAt: -1 });

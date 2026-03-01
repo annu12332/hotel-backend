@@ -14,7 +14,7 @@ const bookingSchema = new mongoose.Schema({
     members: { type: String, required: true }, 
     checkIn: { type: Date, required: true },
     checkOut: { type: Date, required: true },
-    totalPrice: { type: Number, default: 0, required: false },
+    totalPrice: { type: Number, default: 0, required:false },
     status: { type: String, default: 'Pending' }
 }, { timestamps: true });
 
