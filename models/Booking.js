@@ -6,15 +6,15 @@ const bookingSchema = new mongoose.Schema({
         required: false, 
         default: "navbar_inquiry" 
     },
-    roomTitle: { type: String, required: true },
+    roomTitle: { type: String, required: false },
     guestName: { type: String, required: true },
-    email: { type: String, required: true }, 
+    email: { type: String, required: false }, 
     phone: { type: String, required: true }, 
     address: { type: String, required: true }, 
     members: { type: String, required: true }, 
     checkIn: { type: Date, required: true },
     checkOut: { type: Date, required: true },
-    totalPrice: { type: Number, default: 0 },
+    totalPrice: { type: Number, default: 0, required: false },
     status: { type: String, default: 'Pending' }
 }, { timestamps: true });
 
